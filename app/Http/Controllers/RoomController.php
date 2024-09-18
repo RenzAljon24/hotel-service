@@ -46,4 +46,33 @@ class RoomController extends Controller
 
         return response()->json(['message' => 'Room created successfully'], 201);
     }
+
+        // Get latest 10 rooms
+        public function getLatestRooms()
+        {
+            $rooms = Room::latest()->take(5)->get(); // Get the latest 10 rooms
+            return response()->json($rooms, 200);
+        }
+
+
+
+
+     // Fetch rooms by their type
+    public function getRoomsByType($type)
+    {
+        // Validate that the type is one of the allowed values
+        if (!in_array($type, ['single', 'double', 'suite'])) {
+            return response()->json(['message' => 'Invalid room type'], 400);
+        }
+
+        // Fetch rooms by their type
+        $rooms = Room::where('type', $type)->get();
+
+        if ($rooms->isEmpty()) {
+            return response()->json(['message' => 'No rooms found for this type'], 404);
+        }
+
+        return response()->json($rooms, 200);
+    }
+
 }
