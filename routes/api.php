@@ -1,111 +1,73 @@
 <?php
-
-use App\Models\User; 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Controller;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\ReservationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Hash; 
-use Illuminate\Validation\ValidationException;
 
-use App\Http\Controllers\RoomController;
+// Constants for image storage paths and validation rules
+const PROFILE_IMAGE_PATH = 'profiles';
+const ROOM_IMAGE_PATH = 'room_images';
+const IMAGE_VALIDATION_RULES = 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048';
+const USER_UPDATE_VALIDATION_RULES = [
+    'first_name' => 'required|string|max:255',
+    'last_name' => 'required|string|max:255',
+    'profile' => IMAGE_VALIDATION_RULES,
+];
 
-// para makuha or ung user na validated/authenticated
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return response()->json($request->user());
+// Middleware group for authenticated routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', function (Request $request) {
+        return response()->json($request->user());
+    });
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
+    Route::post('/reservations', [ReservationController::class, 'store']);
 });
 
 // Room routes
-Route::get('rooms/latest' , [RoomController::class, 'getLatestRooms']);
-Route::get('/rooms/type/{type}', [RoomController::class, 'getRoomsByType']);
-Route::get('rooms', [RoomController::class, 'index']); // Get all rooms
-Route::get('rooms/{id}', [RoomController::class, 'show']); // Get single room by ID
-Route::post('rooms', [RoomController::class, 'tore']); // Create a new room
-
-// Login route
-Route::post('/login', function (Request $request) {
-    $request->validate([
-        'email' => 'required|email',
-        'password' => 'required',
-        'device_name' => 'required',
-    ]);
-
-    $user = User::where('email', $request->email)->first();
-
-    if (! $user || ! Hash::check($request->password, $user->password)) {
-        throw ValidationException::withMessages([
-            'email' => ['The provided credentials are incorrect.'],
-        ]);
-    }
-
-    $token = $user->createToken($request->device_name)->plainTextToken;
-
-    return response()->json([
-        'token' => $token,
-        'user' => $user->only('id', 'first_name', 'last_name', 'profile', 'email')
-    ], 201);
-
+Route::prefix('rooms')->group(function () {
+    Route::get('latest', [RoomController::class, 'getLatestRooms']);
+    Route::get('type/{type}', [RoomController::class, 'getRoomsByType']);
+    Route::get('/', [RoomController::class, 'index']); // Get all rooms
+    Route::get('{id}', [RoomController::class, 'show']); // Get single room by ID
+    Route::post('/', [RoomController::class, 'store']); // Create a new room
 });
 
-    //register route
-    Route::post('/register', function(Request $request){
-        $request->validate([
-            'first_name' =>'required',
-            'last_name' => 'required',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6|confirmed',
+Route::get('/rooms/{roomId}/booked-dates', [ReservationController::class, 'getBookedDates']);
 
-        ]);
+// Auth routes
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
 
-        $user = User::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-        return response()->json($user, 201);
-    });
+class UserController extends Controller {
+    public function updateProfile(Request $request) {
+        $user = $request->user();
 
-    //logout/deleting accesstoken
-    Route::middleware('auth:sanctum')->post('/logout', function(Request $request){
-        $request->user()->currentAccessToken()->delete();
+        // Validate the request
+        $validatedData = $request->validate(USER_UPDATE_VALIDATION_RULES);
 
-        return response()->json('Logged out', 200);
+        // Update user's first and last name
+        $user->first_name = $validatedData['first_name'];
+        $user->last_name = $validatedData['last_name'];
 
-    });
+        // Check if a profile image was uploaded
+        if ($request->hasFile('profile')) {
+            $profileImage = $request->file('profile');
+            // Store the profile image and generate its path
+            $path = $profileImage->store(PROFILE_IMAGE_PATH, 'public');
+            // Save the path to the user's profile
+            $user->profile = $path;
+        }
 
-    // Update user profile 
-Route::middleware('auth:sanctum')->put('/user/profile', function (Request $request) {
-    $user = $request->user();
+        // Save the updated user data
+        $user->save();
 
-    // Validate the request
-    $request->validate([
-        'first_name' => 'required|string|max:255',
-        'last_name' => 'required|string|max:255',
-        'profile' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Image validation
-    ]);
-
-    // Update user's first and last name
-    $user->first_name = $request->first_name;
-    $user->last_name = $request->last_name;
-
-    // Check if a profile image was uploaded
-    if ($request->hasFile('profile')) {
-        $profileImage = $request->file('profile');
-
-        // Store the profile image and generate its path
-        $path = $profileImage->store('profiles', 'public');
-
-        // Save the path to the user's profile
-        $user->profile = $path;
+        // Return a success response with updated user information
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
+        ], 200);
     }
-
-    // Save the updated user data
-    $user->save();
-
-    // Return a success response with updated user information
-    return response()->json([
-        'message' => 'Profile updated successfully',
-        'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
-    ], 200);
-});
-
-
+}

@@ -21,6 +21,7 @@ class Kernel extends HttpKernel
         \Illuminate\Http\Middleware\SetCacheHeaders::class,
         \Illuminate\Routing\Middleware\ThrottleRequests::class,
         \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        \Fruitcake\Cors\HandleCors::class,
     ];
 
     /**

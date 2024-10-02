@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Room;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class RoomController extends Controller
 {
@@ -11,6 +12,14 @@ class RoomController extends Controller
     public function index()
     {
         $rooms = Room::all();
+
+        // Loop through each room and append the image URL if it exists
+        foreach ($rooms as $room) {
+            if ($room->image) {
+                $room->image = url('storage/' . $room->image); // Correct URL to access the image
+            }
+        }
+
         return response()->json($rooms, 200);
     }
 
@@ -21,6 +30,10 @@ class RoomController extends Controller
 
         if (!$room) {
             return response()->json(['message' => 'Room not found'], 404);
+        }
+
+        if ($room->image) {
+            $room->image = url('storage/' . $room->image); // Correct URL to access the image
         }
 
         return response()->json($room, 200);
@@ -47,17 +60,22 @@ class RoomController extends Controller
         return response()->json(['message' => 'Room created successfully'], 201);
     }
 
-        // Get latest 10 rooms
-        public function getLatestRooms()
-        {
-            $rooms = Room::latest()->take(5)->get(); // Get the latest 10 rooms
-            return response()->json($rooms, 200);
+    // Get the latest 5 rooms
+    public function getLatestRooms()
+    {
+        $rooms = Room::latest()->take(4)->get(); // Get the latest 5 rooms
+
+        // Loop through each room and append the image URL if it exists
+       foreach ($rooms as $room)  {
+            if ($room->image) {
+                $room->image = url('storage/' . $room->image); // Correct URL to access the image
+            }
         }
 
+        return response()->json($rooms, 200);
+    }
 
-
-
-     // Fetch rooms by their type
+    // Fetch rooms by their type
     public function getRoomsByType($type)
     {
         // Validate that the type is one of the allowed values
@@ -72,7 +90,13 @@ class RoomController extends Controller
             return response()->json(['message' => 'No rooms found for this type'], 404);
         }
 
+        // Loop through each room and append the image URL if it exists
+        foreach ($rooms as $room) {
+            if ($room->image) {
+                $room->image = url('storage/' . $room->image); // Correct URL to access the image
+            }
+        }
+
         return response()->json($rooms, 200);
     }
-
 }
