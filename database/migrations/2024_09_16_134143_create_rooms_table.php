@@ -13,11 +13,10 @@ return new class extends Migration
     {
         Schema::create('rooms', function (Blueprint $table) {
             $table->id();
-            $table->string('room_number');
+            $table->string('room_name')->nullable();
             $table->enum('type', ['single', 'double', 'suite']);
             $table->text('description')->nullable();
             $table->decimal('price', 8, 2);
-            $table->boolean('availability')->default(true);
             $table->string('image')->nullable(); // Store the path to the room image
             $table->timestamps();
         });

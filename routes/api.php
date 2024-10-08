@@ -3,7 +3,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\ReservationController;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
 // Constants for image storage paths and validation rules
@@ -33,6 +35,8 @@ Route::prefix('rooms')->group(function () {
     Route::get('/', [RoomController::class, 'index']); // Get all rooms
     Route::get('{id}', [RoomController::class, 'show']); // Get single room by ID
     Route::post('/', [RoomController::class, 'store']); // Create a new room
+    Route::delete('/{id}', [RoomController::class, 'destroy']);
+    Route::put('{rooms}', [RoomController::class, 'update']);
 });
 
 Route::get('/rooms/{roomId}/booked-dates', [ReservationController::class, 'getBookedDates']);
@@ -40,6 +44,17 @@ Route::get('/rooms/{roomId}/booked-dates', [ReservationController::class, 'getBo
 // Auth routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+
+Route::get('/create-admin', function () {
+    $user = User::create([
+        'first_name' => 'Admin',
+        'last_name' => 'User',
+        'email' => 'admin@example.com',
+        'password' => Hash::make('password'), // Use a secure password
+    ]);
+
+    return 'Admin user created successfully!';
+});
 
 class UserController extends Controller {
     public function updateProfile(Request $request) {
@@ -70,4 +85,6 @@ class UserController extends Controller {
             'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
         ], 200);
     }
+
+
 }

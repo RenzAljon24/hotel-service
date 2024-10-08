@@ -43,7 +43,7 @@ class RoomController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'room_number' => 'required|string|max:255',
+            'room_name' => 'required|string|max:255',
             'type' => 'required|in:single,double,suite',
             'description' => 'nullable|string',
             'price' => 'required|numeric',
@@ -98,5 +98,32 @@ class RoomController extends Controller
         }
 
         return response()->json($rooms, 200);
+    }
+
+    public function destroy($id){
+        $room = Room::find($id);
+        $room->delete();
+
+        return response()->json(['message' => 'Room deleted successfully'], 200);
+    }
+
+    public function update(Request $request, Room $room)
+    {
+        $validatedData = $request->validate([
+            "room_number" => "required|string|max:255",
+            "type" => "required|in:single,double,suite",
+            "description" => "nullable|string",
+            "price" => "required|numeric",
+            "image" => "nullable|image|mimes:jpeg,png,jpg|max:2048",
+        ]);
+
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('room_images', 'public');
+            $validatedData['image'] = $imagePath;
+        }
+
+        $room->update($validatedData);
+
+        return response()->json(['message' => 'Room updated successfully'], 200);
     }
 }
