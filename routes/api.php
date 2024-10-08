@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PaymentController;
+
 
 // Constants for image storage paths and validation rules
 const PROFILE_IMAGE_PATH = 'profiles';
@@ -55,6 +57,10 @@ Route::get('/create-admin', function () {
 
     return 'Admin user created successfully!';
 });
+
+//payment route 
+Route::post('/create-charge', [PaymentController::class, 'createCharge']);
+
 
 class UserController extends Controller {
     public function updateProfile(Request $request) {
