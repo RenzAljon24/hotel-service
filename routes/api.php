@@ -3,6 +3,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\TransactionController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -29,6 +30,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::post('/reservations', [ReservationController::class, 'store']);
 });
+
+Route::middleware('auth:sanctum')->get('/user/transactions', [TransactionController::class, 'getUserTransactions']);
+
 
 // Room routes
 Route::prefix('rooms')->group(function () {

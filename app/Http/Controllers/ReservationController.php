@@ -6,7 +6,7 @@ use App\Models\Reservation;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Transaction;
 class ReservationController extends Controller
 {
     /**
@@ -20,10 +20,10 @@ class ReservationController extends Controller
             'check_in' => 'required|date|after_or_equal:today',
             'check_out' => 'required|date|after:check_in',
         ]);
-
+    
         // Find the room by ID
         $room = Room::findOrFail($request->room_id);
-
+    
         // Check if the room is available for the given date range
         $existingReservation = Reservation::where('room_id', $room->id)
             ->where(function ($query) use ($request) {
@@ -33,16 +33,16 @@ class ReservationController extends Controller
                     ->orWhereRaw('? BETWEEN check_in AND check_out', [$request->check_out]);
             })
             ->exists();
-
+    
         // Return an error if the room is already booked
         if ($existingReservation) {
             return response()->json(['error' => 'Room is already booked for the selected dates'], 400);
         }
-
+    
         // Calculate the total price
         $days = (strtotime($request->check_out) - strtotime($request->check_in)) / 86400;
         $totalPrice = $days * $room->price;
-
+    
         // Create the reservation
         $reservation = Reservation::create([
             'user_id' => auth()->id(),
@@ -50,12 +50,24 @@ class ReservationController extends Controller
             'check_in' => $request->check_in,
             'check_out' => $request->check_out,
         ]);
-
+    
+        // Store transaction in the transactions table
+        $transaction = Transaction::create([
+            'user_id' => auth()->id(),
+            'room_id' => $room->id,
+            'check_in' => $request->check_in,
+            'check_out' => $request->check_out,
+            'total_price' => $totalPrice,
+            'status' => 'booked', 
+            'room_image' => $room->image,  
+        ]);
+    
         // Return a success response
         return response()->json([
             'message' => 'Room booked successfully!',
             'total_price' => $totalPrice,
             'reservation' => $reservation,
+            'transaction' => $transaction,
         ]);
     }
 
