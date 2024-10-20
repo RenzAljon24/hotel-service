@@ -37,13 +37,14 @@ Route::middleware('auth:sanctum')->get('/user/transactions', [TransactionControl
 // Room routes
 Route::prefix('rooms')->group(function () {
     Route::get('latest', [RoomController::class, 'getLatestRooms']);
-    Route::get('type/{type}', [RoomController::class, 'getRoomsByType']);
     Route::get('/', [RoomController::class, 'index']); // Get all rooms
     Route::get('{id}', [RoomController::class, 'show']); // Get single room by ID
     Route::post('/', [RoomController::class, 'store']); // Create a new room
     Route::delete('/{id}', [RoomController::class, 'destroy']);
     Route::put('{rooms}', [RoomController::class, 'update']);
 });
+Route::get('type/{type}', [RoomController::class, 'getRoomsByType']);
+
 
 Route::get('/rooms/{roomId}/booked-dates', [ReservationController::class, 'getBookedDates']);
 

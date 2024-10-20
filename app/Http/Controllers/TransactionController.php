@@ -13,7 +13,7 @@ class TransactionController extends Controller
             ->orderBy('created_at', 'desc') // Order by most recent
             ->get()
             ->map(function ($transaction) {
-                $transaction->room_image = asset('storage/' . $transaction->room_image); // Adjust the image path
+                $transaction->room_image = asset('storage/' . $transaction->room_image); 
                 return $transaction;
             });
 
