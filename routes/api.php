@@ -101,15 +101,21 @@ class UserController extends Controller {
                     $extension = $matches[1];
                     $fileName = 'profiles/' . uniqid() . '.' . $extension;
                     Storage::disk('public')->put($fileName, $imageContent);
-                    $user->profile = $fileName;
+                    $user->profile = $fileName; // Save the path to the profile image
                 }
             }
     
             $user->save();
     
+            // Return the updated user information with the profile URL
             return response()->json([
                 'message' => 'Profile updated successfully',
-                'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'profile' => $user->profile ? url('storage/' . $user->profile) : null, // Return the public URL of the image
+                ],
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
