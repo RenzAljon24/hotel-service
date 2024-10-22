@@ -70,55 +70,54 @@ Route::post('/create-charge', [PaymentController::class, 'createCharge']);
 
 
 class UserController extends Controller {
-    public function updateProfile(Request $request)
-    {
+    public function updateProfile(Request $request) {
         try {
-            // Get the authenticated user
             $user = $request->user();
-
-            // Validate the incoming request
+    
+            // Validate request
             $validatedData = $request->validate([
                 'first_name' => 'nullable|string|max:255',
                 'last_name' => 'nullable|string|max:255',
-                'profile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Profile image validation
+                'profile' => 'nullable|string', // Expecting a base64-encoded string
             ]);
-
-            // Update first name and last name if provided
+    
+            // Update first name and last name
             if ($request->filled('first_name')) {
                 $user->first_name = $validatedData['first_name'];
             }
-
+    
             if ($request->filled('last_name')) {
                 $user->last_name = $validatedData['last_name'];
             }
-
-            // Handle the profile image if provided
-            if ($request->hasFile('profile')) {
-                // If user already has a profile image, delete the old one
-                if ($user->profile) {
-                    Storage::disk('public')->delete($user->profile);
+    
+            // Handle base64 image
+            if ($request->filled('profile')) {
+                $base64Image = $validatedData['profile'];
+    
+                // Extract the base64 string without the data:image/... prefix
+                preg_match('/data:image\/(\w+);base64,(.*)/', $base64Image, $matches);
+                if (isset($matches[2])) {
+                    $imageContent = base64_decode($matches[2]);
+                    $extension = $matches[1];
+                    $fileName = 'profiles/' . uniqid() . '.' . $extension;
+                    Storage::disk('public')->put($fileName, $imageContent);
+                    $user->profile = $fileName; // Save the path to the profile image
                 }
-
-                // Store the new profile image and generate its path
-                $imagePath = $request->file('profile')->store('profiles', 'public');
-                $user->profile = $imagePath;
             }
-
-            // Save the updated user data
+    
             $user->save();
-
-            // Return a success response with the updated user information including the image URL
+    
+            // Return the updated user information with the profile URL
             return response()->json([
                 'message' => 'Profile updated successfully',
                 'user' => [
                     'id' => $user->id,
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
-                    'profile' => $user->profile ? url('storage/' . $user->profile) : null, // Return the public URL of the profile image
+                    'profile' => $user->profile ? url('storage/' . $user->profile) : null, // Return the public URL of the image
                 ],
             ], 200);
         } catch (\Exception $e) {
-            // Return error response if an exception occurs
             return response()->json([
                 'message' => 'An error occurred while updating the profile',
                 'error' => $e->getMessage(),
