@@ -74,20 +74,25 @@ class UserController extends Controller {
         try {
             $user = $request->user();
 
+            // Log the request data
+            Log::info('Incoming request data:', $request->all());
+
             // Validate the request
             $validatedData = $request->validate([
-                'first_name' => 'nullable|string|max:255',  // Now optional
-                'last_name' => 'nullable|string|max:255',   // Now optional
+                'first_name' => 'nullable|string|max:255',
+                'last_name' => 'nullable|string|max:255',
                 'profile' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
             // Update user's first and last name if provided
-            if ($request->has('first_name')) {
+            if ($request->filled('first_name')) {
                 $user->first_name = $validatedData['first_name'];
+                Log::info('First name updated to:', ['first_name' => $validatedData['first_name']]);
             }
 
-            if ($request->has('last_name')) {
+            if ($request->filled('last_name')) {
                 $user->last_name = $validatedData['last_name'];
+                Log::info('Last name updated to:', ['last_name' => $validatedData['last_name']]);
             }
 
             // Check if a profile image was uploaded and update it
@@ -95,14 +100,17 @@ class UserController extends Controller {
                 $profileImage = $request->file('profile');
                 
                 // Store the profile image and generate its path
-                $path = $profileImage->store('profiles', 'public');
+                $path = $profileImage->store(PROFILE_IMAGE_PATH, 'public');
 
                 // Save the path to the user's profile
                 $user->profile = $path;
+                Log::info('Profile image path updated to:', ['profile' => $path]);
             }
 
             // Save the updated user data
+            Log::info('Before save:', $user->toArray());
             $user->save();
+            Log::info('After save:', $user->toArray());
 
             // Return a success response with updated user information
             return response()->json([
@@ -110,6 +118,9 @@ class UserController extends Controller {
                 'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
             ], 200);
         } catch (\Exception $e) {
+            // Log the exception message
+            Log::error('Error while updating profile:', ['error' => $e->getMessage()]);
+
             // Return error response if an exception occurs
             return response()->json([
                 'message' => 'An error occurred while updating the profile',
@@ -118,4 +129,3 @@ class UserController extends Controller {
         }
     }
 }
-
