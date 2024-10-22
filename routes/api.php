@@ -73,59 +73,50 @@ class UserController extends Controller {
     public function updateProfile(Request $request) {
         try {
             $user = $request->user();
-
-            // Log the request data
-            Log::info('Incoming request data:', $request->all());
-
-            // Validate the request
+    
+            // Validate request
             $validatedData = $request->validate([
                 'first_name' => 'nullable|string|max:255',
                 'last_name' => 'nullable|string|max:255',
-                'profile' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'profile' => 'nullable|string', // Expecting a base64-encoded string
             ]);
-
-            // Update user's first and last name if provided
+    
+            // Update first name and last name
             if ($request->filled('first_name')) {
                 $user->first_name = $validatedData['first_name'];
-                Log::info('First name updated to:', ['first_name' => $validatedData['first_name']]);
             }
-
+    
             if ($request->filled('last_name')) {
                 $user->last_name = $validatedData['last_name'];
-                Log::info('Last name updated to:', ['last_name' => $validatedData['last_name']]);
             }
-
-            // Check if a profile image was uploaded and update it
-            if ($request->hasFile('profile')) {
-                $profileImage = $request->file('profile');
-                
-                // Store the profile image and generate its path
-                $path = $profileImage->store(PROFILE_IMAGE_PATH, 'public');
-
-                // Save the path to the user's profile
-                $user->profile = $path;
-                Log::info('Profile image path updated to:', ['profile' => $path]);
+    
+            // Handle base64 image
+            if ($request->filled('profile')) {
+                $base64Image = $validatedData['profile'];
+    
+                // Extract the base64 string without the data:image/... prefix
+                preg_match('/data:image\/(\w+);base64,(.*)/', $base64Image, $matches);
+                if (isset($matches[2])) {
+                    $imageContent = base64_decode($matches[2]);
+                    $extension = $matches[1];
+                    $fileName = 'profiles/' . uniqid() . '.' . $extension;
+                    Storage::disk('public')->put($fileName, $imageContent);
+                    $user->profile = $fileName;
+                }
             }
-
-            // Save the updated user data
-            Log::info('Before save:', $user->toArray());
+    
             $user->save();
-            Log::info('After save:', $user->toArray());
-
-            // Return a success response with updated user information
+    
             return response()->json([
                 'message' => 'Profile updated successfully',
                 'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
             ], 200);
         } catch (\Exception $e) {
-            // Log the exception message
-            Log::error('Error while updating profile:', ['error' => $e->getMessage()]);
-
-            // Return error response if an exception occurs
             return response()->json([
                 'message' => 'An error occurred while updating the profile',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
+    
 }
