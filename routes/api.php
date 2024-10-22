@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PaymentController;
 
 
+
+
 // Constants for image storage paths and validation rules
 const PROFILE_IMAGE_PATH = 'profiles';
 const ROOM_IMAGE_PATH = 'room_images';
@@ -69,33 +71,51 @@ Route::post('/create-charge', [PaymentController::class, 'createCharge']);
 
 class UserController extends Controller {
     public function updateProfile(Request $request) {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        // Validate the request
-        $validatedData = $request->validate(USER_UPDATE_VALIDATION_RULES);
+            // Validate the request
+            $validatedData = $request->validate([
+                'first_name' => 'nullable|string|max:255',  // Now optional
+                'last_name' => 'nullable|string|max:255',   // Now optional
+                'profile' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ]);
 
-        // Update user's first and last name
-        $user->first_name = $validatedData['first_name'];
-        $user->last_name = $validatedData['last_name'];
+            // Update user's first and last name if provided
+            if ($request->has('first_name')) {
+                $user->first_name = $validatedData['first_name'];
+            }
 
-        // Check if a profile image was uploaded
-        if ($request->hasFile('profile')) {
-            $profileImage = $request->file('profile');
-            // Store the profile image and generate its path
-            $path = $profileImage->store(PROFILE_IMAGE_PATH, 'public');
-            // Save the path to the user's profile
-            $user->profile = $path;
+            if ($request->has('last_name')) {
+                $user->last_name = $validatedData['last_name'];
+            }
+
+            // Check if a profile image was uploaded and update it
+            if ($request->hasFile('profile')) {
+                $profileImage = $request->file('profile');
+                
+                // Store the profile image and generate its path
+                $path = $profileImage->store('profiles', 'public');
+
+                // Save the path to the user's profile
+                $user->profile = $path;
+            }
+
+            // Save the updated user data
+            $user->save();
+
+            // Return a success response with updated user information
+            return response()->json([
+                'message' => 'Profile updated successfully',
+                'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
+            ], 200);
+        } catch (\Exception $e) {
+            // Return error response if an exception occurs
+            return response()->json([
+                'message' => 'An error occurred while updating the profile',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // Save the updated user data
-        $user->save();
-
-        // Return a success response with updated user information
-        return response()->json([
-            'message' => 'Profile updated successfully',
-            'user' => $user->only('id', 'first_name', 'last_name', 'profile'),
-        ], 200);
     }
-
-
 }
+
