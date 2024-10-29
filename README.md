@@ -20,7 +20,7 @@ This repository contains the backend server for the **Hotel Haven** mobile hotel
 
 ### Prerequisites
 
-- **PHP >= 8.0**
+- **PHP >= 8.3**
 - **Composer**
 - **MySQL or other database**
 
